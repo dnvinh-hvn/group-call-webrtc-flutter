@@ -8,7 +8,6 @@ import 'package:example/features/room/bloc/room_bloc.dart';
 import 'package:example/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:random_string/random_string.dart';
 
 List<BlocProvider> getRoomModules({
   required RouteSettings settings,
@@ -28,7 +27,7 @@ List<BlocProvider> getRoomModules({
       lazy: false,
       create: (context) => MeBloc(
           displayName: nouns[Random.secure().nextInt(2500)],
-          id: randomAlpha(8)),
+          id: '123123-${Random.secure().nextInt(250)}'),
     ),
     BlocProvider<RoomBloc>(
       lazy: false,

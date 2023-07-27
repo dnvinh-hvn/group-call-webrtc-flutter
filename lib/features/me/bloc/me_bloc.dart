@@ -12,18 +12,11 @@ class MeBloc extends Bloc<MeEvent, MeState> {
     shareInProgress: false,
     id: id,
     displayName: displayName,
-  ));
-
-  @override
-  Stream<MeState> mapEventToState(
-    MeEvent event,
-  ) async* {
-    if (event is MeSetWebcamInProgress) {
-      yield* _mapMeSetWebCamInProgressToState(event);
-    }
+  )) {
+    on<MeSetWebcamInProgress>(_mapMeSetWebCamInProgressToState);
   }
 
-  Stream<MeState> _mapMeSetWebCamInProgressToState(MeSetWebcamInProgress event) async* {
-    yield MeState.copy(state, webcamInProgress: event.progress);
+  _mapMeSetWebCamInProgressToState(MeSetWebcamInProgress event, Emitter<MeState> emit) async {
+    emit(MeState.copy(state, webcamInProgress: event.progress));
   }
 }

@@ -11,7 +11,6 @@ import 'package:example/features/peers/bloc/peers_bloc.dart';
 import 'package:example/features/producers/bloc/producers_bloc.dart';
 import 'package:example/features/room/bloc/room_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:random_string/random_string.dart';
 
 import 'package:flutter/material.dart';
 
@@ -73,7 +72,7 @@ class MyApp extends StatelessWidget {
                           : 'wss://v3demo.mediasoup.org:4443',
                       roomId: uri.queryParameters['roomId'] ??
                           uri.queryParameters['roomid'] ??
-                          randomAlpha(8).toLowerCase(),
+                          'izn9mwxy',
                       peersBloc: context.read<PeersBloc>(),
                       producersBloc: context.read<ProducersBloc>(),
                       meBloc: context.read<MeBloc>(),

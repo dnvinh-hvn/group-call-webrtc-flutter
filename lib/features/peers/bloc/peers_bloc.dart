@@ -10,79 +10,59 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:mediasoup_client_flutter/mediasoup_client_flutter.dart';
 
 part 'peers_event.dart';
+
 part 'peers_state.dart';
 
 class PeersBloc extends Bloc<dynamic, PeersState> {
   final MediaDevicesBloc mediaDevicesBloc;
   String selectedOutputId = '';
+
   PeersBloc({required this.mediaDevicesBloc}) : super(PeersState()) {
-    // if (mediaDevicesBloc.state.selectedAudioOutput?.deviceId != null) {
-    //   selectedOutputId = mediaDevicesBloc.state.selectedAudioOutput!.deviceId;
-    // }
-    //
-    // mediaDevicesBloc.stream.listen((event) {
-    //   state.peers.values.forEach((p) {
-    //     final String? deviceId = event.selectedAudioOutput?.deviceId;
-    //     if (deviceId != null) {
-    //       selectedOutputId = deviceId;
-    //       p.renderer?.audioOutput = selectedOutputId;
-    //     }
-    //   });
-    // });
+    on<PeerAdd>(_mapPeerAddToState);
+    on<PeerRemove>(_mapPeerRemoveToState);
+    on<PeerAddConsumer>(_mapConsumerAddToState);
+    on<PeerRemoveConsumer>(_mapConsumerRemoveToState);
+    on<PeerPausedConsumer>(_mapPeerPausedConsumer);
+    on<PeerResumedConsumer>(_mapPeerResumedConsumer);
   }
 
-  @override
-  Stream<PeersState> mapEventToState(
-    dynamic event,
-  ) async* {
-    if (event is PeerAdd) {
-      yield* _mapPeerAddToState(event);
-    } else if (event is PeerRemove) {
-      yield* _mapPeerRemoveToState(event);
-    } else if (event is PeerAddConsumer) {
-      yield* _mapConsumerAddToState(event);
-    } else if (event is PeerRemoveConsumer) {
-      yield* _mapConsumerRemoveToState(event);
-    } else if (event is PeerPausedConsumer) {
-      yield* _mapPeerPausedConsumer(event);
-    } else if (event is PeerResumedConsumer) {
-      yield* _mapPeerResumedConsumer(event);
-    }
-  }
-
-  Stream<PeersState> _mapPeerAddToState(PeerAdd event) async* {
+  _mapPeerAddToState(PeerAdd event, Emitter<PeersState> emit) async {
     final Map<String, Peer> newPeers = Map<String, Peer>.of(state.peers);
     final Peer newPeer = Peer.fromMap(event.newPeer);
     newPeers[newPeer.id] = newPeer;
 
-    yield PeersState(peers: newPeers);
+    emit(PeersState(peers: newPeers));
   }
 
-  Stream<PeersState> _mapPeerRemoveToState(PeerRemove event) async* {
+  _mapPeerRemoveToState(PeerRemove event, Emitter<PeersState> emit) async {
     final Map<String, Peer> newPeers = Map<String, Peer>.of(state.peers);
     newPeers.remove(event.peerId);
 
-    yield PeersState(peers: newPeers);
+    emit(PeersState(peers: newPeers));
   }
 
-  Stream<PeersState> _mapConsumerAddToState(PeerAddConsumer event) async* {
+  _mapConsumerAddToState(
+      PeerAddConsumer event, Emitter<PeersState> emit) async {
     final Map<String, Peer> newPeers = Map<String, Peer>.of(state.peers);
 
     if (kIsWeb) {
       if (newPeers[event.peerId]!.renderer == null) {
-        newPeers[event.peerId!] = newPeers[event.peerId]!.copyWith(renderer: RTCVideoRenderer());
+        newPeers[event.peerId!] =
+            newPeers[event.peerId]!.copyWith(renderer: RTCVideoRenderer());
         await newPeers[event.peerId]!.renderer!.initialize();
         // newPeers[event.peerId]!.renderer!.audioOutput = selectedOutputId;
       }
 
       if (event.consumer.kind == 'video') {
-        newPeers[event.peerId!] = newPeers[event.peerId]!.copyWith(video: event.consumer);
+        newPeers[event.peerId!] =
+            newPeers[event.peerId]!.copyWith(video: event.consumer);
         newPeers[event.peerId]!.renderer!.srcObject =
             newPeers[event.peerId]!.video!.stream;
       }
 
       if (event.consumer.kind == 'audio') {
-        newPeers[event.peerId!] = newPeers[event.peerId]!.copyWith(audio: event.consumer);
+        newPeers[event.peerId!] =
+            newPeers[event.peerId]!.copyWith(audio: event.consumer);
         if (newPeers[event.peerId]!.video == null) {
           newPeers[event.peerId]!.renderer!.srcObject =
               newPeers[event.peerId]!.audio!.stream;
@@ -105,11 +85,11 @@ class PeersBloc extends Bloc<dynamic, PeersState> {
       }
     }
 
-    yield PeersState(peers: newPeers);
+    emit(PeersState(peers: newPeers));
   }
 
-  Stream<PeersState> _mapConsumerRemoveToState(
-      PeerRemoveConsumer event) async* {
+  _mapConsumerRemoveToState(
+      PeerRemoveConsumer event, Emitter<PeersState> emit) async {
     final Map<String, Peer> newPeers = Map<String, Peer>.of(state.peers);
     final Peer? peer = newPeers.values
         .firstWhereOrNull((p) => p.consumers.contains(event.consumerId));
@@ -121,12 +101,12 @@ class PeersBloc extends Bloc<dynamic, PeersState> {
           if (peer.video == null) {
             final renderer = newPeers[peer.id]?.renderer!;
             newPeers[peer.id] = newPeers[peer.id]!.removeAudioAndRenderer();
-            yield PeersState(peers: newPeers);
+            emit(PeersState(peers: newPeers));
             await Future.delayed(Duration(microseconds: 300));
             await renderer?.dispose();
           } else {
             newPeers[peer.id] = newPeers[peer.id]!.removeAudio();
-            yield PeersState(peers: newPeers);
+            emit(PeersState(peers: newPeers));
           }
           await consumer?.close();
         } else if (peer.video?.id == event.consumerId) {
@@ -135,11 +115,11 @@ class PeersBloc extends Bloc<dynamic, PeersState> {
             newPeers[peer.id]!.renderer!.srcObject =
                 newPeers[peer.id]!.audio!.stream;
             newPeers[peer.id] = newPeers[peer.id]!.removeVideo();
-            yield PeersState(peers: newPeers);
+            emit(PeersState(peers: newPeers));
           } else {
             final renderer = newPeers[peer.id]!.renderer!;
             newPeers[peer.id] = newPeers[peer.id]!.removeVideoAndRenderer();
-            yield PeersState(peers: newPeers);
+            emit(PeersState(peers: newPeers));
             await renderer.dispose();
           }
           await consumer?.close();
@@ -148,23 +128,24 @@ class PeersBloc extends Bloc<dynamic, PeersState> {
         if (peer.audio?.id == event.consumerId) {
           final consumer = peer.audio;
           newPeers[peer.id] = newPeers[peer.id]!.removeAudio();
-          yield PeersState(peers: newPeers);
+          emit(PeersState(peers: newPeers));
           await consumer?.close();
         } else if (peer.video?.id == event.consumerId) {
           final consumer = peer.video;
           final renderer = peer.renderer;
           newPeers[peer.id] = newPeers[peer.id]!.removeVideoAndRenderer();
-          yield PeersState(peers: newPeers);
+          emit(PeersState(peers: newPeers));
           consumer
-            ?.close()
-            .then((_) => Future.delayed(Duration(microseconds: 300)))
-            .then((_) async => await renderer?.dispose());
+              ?.close()
+              .then((_) => Future.delayed(Duration(microseconds: 300)))
+              .then((_) async => await renderer?.dispose());
         }
       }
     }
   }
 
-  Stream<PeersState> _mapPeerPausedConsumer(PeerPausedConsumer event) async* {
+  _mapPeerPausedConsumer(
+      PeerPausedConsumer event, Emitter<PeersState> emit) async {
     final Map<String, Peer> newPeers = Map<String, Peer>.of(state.peers);
     final Peer? peer = newPeers.values
         .firstWhereOrNull((p) => p.consumers.contains(event.consumerId));
@@ -174,11 +155,11 @@ class PeersBloc extends Bloc<dynamic, PeersState> {
         audio: peer.audio!.pauseCopy(),
       );
 
-      yield PeersState(peers: newPeers);
+      emit(PeersState(peers: newPeers));
     }
   }
 
-  Stream<PeersState> _mapPeerResumedConsumer(PeerResumedConsumer event) async* {
+  _mapPeerResumedConsumer(PeerResumedConsumer event, Emitter<PeersState> emit) async {
     final Map<String, Peer> newPeers = Map<String, Peer>.of(state.peers);
     final Peer? peer = newPeers.values
         .firstWhereOrNull((p) => p.consumers.contains(event.consumerId));
@@ -188,7 +169,7 @@ class PeersBloc extends Bloc<dynamic, PeersState> {
         audio: peer.audio!.resumeCopy(),
       );
 
-      yield PeersState(peers: newPeers);
+      emit(PeersState(peers: newPeers));
     }
   }
 

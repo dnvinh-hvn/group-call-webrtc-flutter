@@ -8,43 +8,33 @@ part 'media_devices_event.dart';
 part 'media_devices_state.dart';
 
 class MediaDevicesBloc extends Bloc<MediaDevicesEvent, MediaDevicesState> {
-  MediaDevicesBloc() : super(MediaDevicesState());
-
-  @override
-  Stream<MediaDevicesState> mapEventToState(
-    MediaDevicesEvent event,
-  ) async* {
-    if (event is MediaDeviceLoadDevices) {
-      yield* _mapLoadDevicesToState(event);
-    } else if (event is MediaDeviceSelectAudioInput) {
-      yield* _mapSelectAudioInputToState(event);
-    } else if (event is MediaDeviceSelectAudioOutput) {
-      yield* _mapSelectAudioOutputToState(event);
-    } else if (event is MediaDeviceSelectVideoInput) {
-      yield* _mapSelectVideoInputToState(event);
-    }
+  MediaDevicesBloc() : super(MediaDevicesState()) {
+    on<MediaDeviceLoadDevices>(_mapLoadDevicesToState);
+    on<MediaDeviceSelectAudioInput>(_mapSelectAudioInputToState);
+    on<MediaDeviceSelectAudioOutput>(_mapSelectAudioOutputToState);
+    on<MediaDeviceSelectVideoInput>(_mapSelectVideoInputToState);
   }
 
-  Stream<MediaDevicesState> _mapSelectAudioInputToState(MediaDeviceSelectAudioInput event) async* {
-    yield state.copyWith(
+  _mapSelectAudioInputToState(MediaDeviceSelectAudioInput event, Emitter<MediaDevicesState> emit) async {
+    emit(state.copyWith(
       selectedAudioInput: event.device,
-    );
+    ));
   }
 
-  Stream<MediaDevicesState> _mapSelectAudioOutputToState(MediaDeviceSelectAudioOutput event) async* {
-    yield state.copyWith(
+  _mapSelectAudioOutputToState(MediaDeviceSelectAudioOutput event, Emitter<MediaDevicesState> emit) async {
+    emit(state.copyWith(
       selectedAudioOutput: event.device,
-    );
+    ));
   }
 
-  Stream<MediaDevicesState> _mapSelectVideoInputToState(MediaDeviceSelectVideoInput event) async* {
-    yield state.copyWith(
+  _mapSelectVideoInputToState(MediaDeviceSelectVideoInput event, Emitter<MediaDevicesState> emit) async {
+    emit(state.copyWith(
       selectedVideoInput: event.device,
-    );
+    ));
   }
 
-  Stream<MediaDevicesState> _mapLoadDevicesToState(
-      MediaDeviceLoadDevices event) async* {
+  _mapLoadDevicesToState(
+      MediaDeviceLoadDevices event, Emitter<MediaDevicesState> emit) async {
     try {
       final List<MediaDeviceInfo> devices =
           await navigator.mediaDevices.enumerateDevices();
@@ -81,14 +71,14 @@ class MediaDevicesBloc extends Bloc<MediaDevicesEvent, MediaDevicesState> {
         selectedVideoInput = videoInputs.first;
       }
 
-      yield MediaDevicesState(
+      emit(MediaDevicesState(
         audioInputs: audioInputs,
         audioOutputs: audioOutputs,
         videoInputs: videoInputs,
         selectedAudioInput: selectedAudioInput,
         selectedAudioOutput: selectedAudioOutput,
         selectedVideoInput: selectedVideoInput,
-      );
+      ));
     } catch (e) {}
   }
 }
